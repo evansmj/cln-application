@@ -11,7 +11,7 @@ import { isCompatibleVersion, sortDescByKey } from '../utilities/data-formatters
 import logger from '../services/logger.service';
 import { AppContextType } from '../types/app-context.type';
 import { ApplicationConfiguration, AuthResponse, FiatConfig, ModalConfig, ToastConfig, WalletConnect } from '../types/app-config.type';
-import { BkprTransaction, Fund, FundChannel, FundOutput, Invoice, ListBitcoinTransactions, ListInvoices, ListPayments, ListOffers, ListPeers, NodeFeeRate, NodeInfo, Payment, ListPeerChannels, ListNodes, Node } from '../types/lightning-wallet.type';
+import { BkprTransaction, Fund, FundChannel, FundOutput, Invoice, ListBitcoinTransactions, ListInvoices, ListPayments, ListOffers, ListPeers, NodeFeeRate, NodeInfo, Payment, ListPeerChannels, ListNodes, Node, ShowRunes } from '../types/lightning-wallet.type';
 
 const aggregatePeerChannels = (listPeerChannels: any, listNodes: Node[], version: string) => {
   const aggregatedChannels: any = { activeChannels: [], pendingChannels: [], inactiveChannels: [] };
@@ -204,6 +204,25 @@ const filterOnChainTransactions = (events: BkprTransaction[], currentVersion: st
   }
 };
 
+const appendInvoiceRune = (walletConnect: WalletConnect, showRunes: ShowRunes) => {
+  const foundRune = showRunes.runes.find(rune =>
+    rune.restrictions.some(restriction =>
+      restriction.alternatives.some(alternative => alternative.value === 'invoice')
+    ) && rune.restrictions.some(restriction =>
+      restriction.alternatives.some(alternative => alternative.value === 'listinvoices')
+    )
+  );
+
+  let invoiceRune: string = "";
+
+  if (foundRune) {
+    invoiceRune = foundRune.rune
+  }
+
+  walletConnect.INVOICE_RUNE = invoiceRune;
+  return walletConnect;
+};
+
 const AppContext = React.createContext<AppContextType>({
   authStatus: { isAuthenticated: false, isValidPassword: false },
   showModals: {nodeInfoModal: false, connectWalletModal: false, loginModal: false, logoutModal: false, setPasswordModal: false},
@@ -225,7 +244,7 @@ const AppContext = React.createContext<AppContextType>({
   setAuthStatus: (isAuth: AuthResponse) => {},
   setShowModals: (newShowModals: ModalConfig) => {}, 
   setShowToast: (newShowToast: ToastConfig) => {},
-  setWalletConnect: (newWalletConnect: WalletConnect) => {},
+  setWalletConnect: (data: (WalletConnect | ShowRunes)) => {},
   setConfig: (config: ApplicationConfiguration) => {},
   setFiatConfig: (fiatConfig: FiatConfig) => {},
   setFeeRate: (feeRate: NodeFeeRate) => {},
@@ -284,9 +303,11 @@ const appReducer = (state, action) => {
   
     case ApplicationActions.SET_WALLET_CONNECT:
       action.payload.TOR_DOMAIN_NAME = action.payload.TOR_HOST?.replace('https://', '').replace('http://', '');
+      const [ walletConnect, showRunes ] = action.payload.data;
+      const newPayload = appendInvoiceRune(walletConnect, showRunes);
       return {
         ...state,
-        walletConnect: action.payload
+        walletConnect: newPayload
       };
   
     case ApplicationActions.SET_CONFIG:
@@ -411,8 +432,8 @@ const AppProvider: React.PropsWithChildren<any> = (props) => {
     dispatchApplicationAction({ type: ApplicationActions.SET_SHOW_TOAST, payload: newShowToast });
   };
 
-  const setWalletConnectHandler = (walletConnect: WalletConnect) => {
-    dispatchApplicationAction({ type: ApplicationActions.SET_WALLET_CONNECT, payload: walletConnect });
+  const setWalletConnectHandler = (data: (WalletConnect | ShowRunes)) => {
+    dispatchApplicationAction({ type: ApplicationActions.SET_WALLET_CONNECT, payload: { data }});
   };
 
   const setConfigurationHandler = (config: ApplicationConfiguration) => {
