@@ -6,8 +6,8 @@ import { AppContext } from '../store/AppContext';
 import { ApplicationConfiguration } from '../types/app-config.type';
 import { faDollarSign } from '@fortawesome/free-solid-svg-icons';
 import { isCompatibleVersion } from '../utilities/data-formatters';
-import { BalanceSheetSQL } from '../sql/bookkeeper-sql';
-import { transformToBalanceSheet } from '../sql/bookkeeper-transform';
+import { BalanceSheetSQL, SatsFlowSQL } from '../sql/bookkeeper-sql';
+import { transformToBalanceSheet, transformToSatsFlow } from '../sql/bookkeeper-transform';
 
 let intervalID;
 let localAuthStatus: any = null;
@@ -169,6 +169,11 @@ const useHttp = () => {
       .then((response) => transformToBalanceSheet(response.data, timeGranularity));
   };
 
+  const getSatsFlow = (timeGranularity: TimeGranularity) => {
+    return sendRequest(false, 'post', 'cln/call', { 'method': 'sql', 'params': [SatsFlowSQL] })
+      .then((response) => transformToSatsFlow(response.data, timeGranularity));
+  };
+
   const clnSendPayment = (paymentType: PaymentType, invoice: string, amount: number | null) => {
     if (paymentType === PaymentType.KEYSEND) {
       return sendRequest(true, 'post', '/cln/call', { 'method': 'keysend', 'params': { 'destination': invoice, 'amount_msat': amount } });
@@ -308,8 +313,9 @@ const useHttp = () => {
     clnReceiveInvoice,
     decodeInvoice,
     fetchInvoice,
-    getBalanceSheet,
     createInvoiceRune,
+    getBalanceSheet,
+    getSatsFlow,
     userLogin,
     resetUserPassword,
     userLogout
