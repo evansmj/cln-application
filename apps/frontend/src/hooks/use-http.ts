@@ -223,6 +223,10 @@ const useHttp = () => {
     return sendRequest(false, 'post', '/shared/saveinvoicerune');
   }
 
+  const executeSql = (query: string) => {
+    return sendRequest(false, 'post', '/cln/call', { 'method': 'sql', 'params': [ query ] });
+  };
+
   const refreshConnectWalletData = () => {
     return sendRequest(true, 'get', '/shared/connectwallet/');
   }
@@ -322,6 +326,7 @@ const useHttp = () => {
     getBalanceSheet,
     getSatsFlow,
     getVolumeData,
+    executeSql,
     userLogin,
     resetUserPassword,
     userLogout
