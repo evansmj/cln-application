@@ -107,6 +107,22 @@ const ConnectWallet = () => {
       .finally(() => {
         setIsLoadingInvoiceRune(false);
       });
+    });
+  }
+
+  const createInvoiceRuneHandler = () => {
+    setIsLoadingInvoiceRune(true);
+    createInvoiceRune()
+      .then(() => {
+        appCtx.setShowToast({show: true, message: ('Created Invoice Rune Successfully!'), bg: 'success'});
+      })
+      .catch(err => {
+        logger.error(err.message || JSON.stringify(err));
+        appCtx.setShowToast({show: true, message: (`Error Creating Invoice Rune: ${err.message || ''}`), bg: 'danger'});
+      })
+      .finally(() => {
+        setIsLoadingInvoiceRune(false);
+      });
   }
 
   const closeHandler = () => {

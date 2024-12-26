@@ -106,9 +106,9 @@ class SharedController {
             return axios
                 .get(FIAT_RATE_API + FIAT_VENUE + '/pairs/XBT/' + req.params.fiatCurrency)
                 .then((response) => {
-                logger.info('Fiat Response: ' + JSON.stringify(response.data));
-                if (response.data.rate) {
-                    return res.status(200).json({ venue: FIAT_VENUE, rate: response.data.rate });
+                logger.info('Fiat Response: ' + JSON.stringify(response?.data));
+                if (response.data?.rate) {
+                    return res.status(200).json({ venue: FIAT_VENUE, rate: response.data?.rate });
                 }
                 else {
                     return handleError(new APIError('Price Not Found', 'Price Not Found'), req, res, next);

@@ -12,8 +12,6 @@ import logger from '../services/logger.service';
 import { AppContextType } from '../types/app-context.type';
 import { ApplicationConfiguration, AuthResponse, FiatConfig, ModalConfig, ToastConfig, WalletConnect } from '../types/app-config.type';
 import { BkprTransaction, Fund, FundChannel, FundOutput, Invoice, ListBitcoinTransactions, ListInvoices, ListPayments, ListOffers, ListPeers, NodeFeeRate, NodeInfo, Payment, ListPeerChannels, ListNodes, Node } from '../types/lightning-wallet.type';
-import { BalanceSheetResultSet as BalanceSheetResultSet } from '../types/lightning-bookkeeper.type';
-import { transformToBalanceSheet } from '../sql/bookkeeper-transform';
 
 const aggregatePeerChannels = (listPeerChannels: any, listNodes: Node[], version: string) => {
   const aggregatedChannels: any = { activeChannels: [], pendingChannels: [], inactiveChannels: [] };
@@ -331,7 +329,7 @@ const appReducer = (state, action) => {
       };
 
     case ApplicationActions.SET_LIST_CHANNELS:
-      const [listPeerChannels, listNodes] = action.payload.data;
+      const [listPeerChannels, listNodes ] = action.payload?.data && action.payload?.data.length > 0 ? action.payload?.data : [{ channels: [], peers: [] }, { nodes: []}];
       const aggrChannels = aggregatePeerChannels(listPeerChannels, listNodes.nodes, state.nodeInfo.version);
       return {
         ...state,

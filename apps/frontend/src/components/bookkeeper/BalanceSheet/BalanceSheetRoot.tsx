@@ -1,6 +1,7 @@
-import React, { useContext, useEffect, useState } from 'react';
+import { useCallback, useContext, useEffect, useRef, useState } from 'react';
 
 import './BalanceSheetRoot.scss';
+import 'react-datepicker/dist/react-datepicker.css';
 import Card from 'react-bootstrap/Card';
 import Row from 'react-bootstrap/Row';
 import BalanceSheetGraph from './Graph/BalanceSheetGraph';
@@ -8,74 +9,123 @@ import { AppContext } from '../../../store/AppContext';
 import BalanceSheetTable from './Table/BalanceSheetTable';
 import useHttp from '../../../hooks/use-http';
 import { TimeGranularity } from '../../../utilities/constants';
-import { BalanceSheet } from '../../../types/lightning-bookkeeper.type';
+import { BalanceSheet } from '../../../types/lightning-balancesheet.type';
 import TimeGranularitySelection from '../TimeGranularitySelection/TimeGranularitySelection';
-import { Col, Container } from 'react-bootstrap';
+import { Container } from 'react-bootstrap';
+import DatePicker from 'react-datepicker';
+import DatepickerInput from '../DatepickerInput/DatepickerInput';
 
-const BalanceSheetRoot = (props) => {
-  const appCtx = useContext(AppContext); //todo use for units and stuff?  or get units from higher up the chain.
-  const [balanceSheetData, setBalanceSheetData] = useState<BalanceSheet>({ isLoading: true, periods: [] }); //todo deal with loading
-  const [timeGranularity, setTimeGranularity] = useState<TimeGranularity>(TimeGranularity.DAILY);
+const BalanceSheetRoot = () => {
+  const appCtx = useContext(AppContext);
+  const [containerWidth, setContainerWidth] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [balanceSheetData, setBalanceSheetData] = useState<BalanceSheet>({ periods: [] });
+  const [timeGranularity, setTimeGranularity] = useState<TimeGranularity>(TimeGranularity.MONTHLY);
+  const [rangeStart, setRangeStart] = useState<Date | undefined>(undefined);
+  const [rangeEnd, setRangeEnd] = useState<Date | undefined>(undefined);
+  const [hideZeroActivityPeriods, setHideZeroActivityPeriods] = useState<boolean>(true);
   const { getBalanceSheet } = useHttp();
 
-  const fetchBalanceSheetData = async (timeGranularity: TimeGranularity) => {
-    getBalanceSheet(timeGranularity)
-      .then((response: BalanceSheet) => {
-        setBalanceSheetData(response);
-      })
-      .catch(err => {
-        console.log("fetchBalanceSheet error " + JSON.stringify(err));
-      });
+  const updateWidth = () => {
+    if (containerRef.current) {
+      setContainerWidth(containerRef.current.getBoundingClientRect().width);
+    }
   };
 
-  const timeGranularityChangeHandler = (timeGranularity) => {
+  const fetchBalanceSheetData = useCallback(
+    async (timeGranularity: TimeGranularity, hideZeroActivityPeriods: Boolean, startDate?: Date, endDate?: Date) => {
+      getBalanceSheet(timeGranularity, hideZeroActivityPeriods, startDate, endDate)
+        .then((response: BalanceSheet) => {
+          setBalanceSheetData(response);
+        })
+        .catch(err => {
+          console.error('fetchBalanceSheet error ' + JSON.stringify(err));
+        });
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+
+  const timeGranularityChangeHandler = timeGranularity => {
     setTimeGranularity(timeGranularity);
   };
 
+  const hideZeroActivityPeriodsChangeHandler = (event) => {
+    setHideZeroActivityPeriods(event.target.checked);
+  };
+
+  useEffect(() => {
+    updateWidth();
+    window.addEventListener('resize', updateWidth);
+    return () => window.removeEventListener('resize', updateWidth);
+  }, []);
+
   useEffect(() => {
     if (appCtx.authStatus.isAuthenticated) {
-      fetchBalanceSheetData(timeGranularity);
+      fetchBalanceSheetData(timeGranularity, hideZeroActivityPeriods, rangeStart, rangeEnd);
     }
-  }, [appCtx.authStatus.isAuthenticated, timeGranularity]);
+  }, [
+    appCtx.authStatus.isAuthenticated,
+    timeGranularity,
+    rangeStart,
+    rangeEnd,
+    fetchBalanceSheetData,
+    hideZeroActivityPeriods,
+  ]);
 
   return (
-    <div data-testid='balancesheet-container' >
-      <Card className='d-flex align-items-stretch inner-box-shadow'>
-        <Card.Body className='text-dark d-flex align-items-stretch flex-column pt-4'>
-          <Card.Header className='p-0'>
-            <Container fluid>
-              <Row>
-                <Col xs={12}>
-                  <div className='fs-4 p-0 ps-3 fw-bold text-dark'>
-                    Balance Sheet
-                  </div>
-                </Col>
-                <Col xs={12} className='d-flex align-items-center'>
-                  <div className='ms-3 me-3 mt-4'>
-                    Time Granularity
-                  </div>
-                  <TimeGranularitySelection
-                    className='time-granularity-dropdown mt-4'
-                    timeGranularity={timeGranularity}
-                    onTimeGranularityChanged={timeGranularityChangeHandler} />
-                </Col>
-              </Row>
-            </Container>
-          </Card.Header>
-          <Card.Body className='pb-0 px-1 d-flex flex-column align-items-start justify-content-between'>
+    <div data-testid="balancesheet-container" ref={containerRef}>
+      <Card className="d-flex align-items-stretch inner-box-shadow">
+        <Card.Header className="p-2">
+          <Container fluid>
             <Row>
-              <BalanceSheetGraph balanceSheetData={balanceSheetData} />
+              <div className="fs-4 mt-2 fw-bold">Balance Sheet</div>
             </Row>
-            <Row>
-              <BalanceSheetTable balanceSheetData={balanceSheetData} />
-            </Row>
-          </Card.Body>
-          <Card.Footer className='d-flex justify-content-center'>
-          </Card.Footer>
+            <div className="d-flex align-items-center mt-2 gap-4">
+              <div className="fw-bold">Time Granularity</div>
+              <TimeGranularitySelection
+                className="time-granularity-dropdown"
+                timeGranularity={timeGranularity}
+                onTimeGranularityChanged={timeGranularityChangeHandler}
+              />
+              <DatePicker
+                customInput={<DatepickerInput />}
+                selected={rangeStart}
+                onChange={date => setRangeStart(date ?? undefined)}
+                placeholderText="Starts"
+              />
+              <DatePicker
+                customInput={<DatepickerInput />}
+                selected={rangeEnd}
+                onChange={date => setRangeEnd(date ?? undefined)}
+                placeholderText="Ends"
+              />
+              <div className="ms-3 me-3 mt-2 d-flex align-items-center">
+                <input
+                  type="checkbox"
+                  id="hideZeroActivityCheckbox"
+                  name="hideZeroActivity"
+                  checked={hideZeroActivityPeriods}
+                  onChange={hideZeroActivityPeriodsChangeHandler}
+                />
+                <label htmlFor="hideZeroActivityCheckbox" className="ms-2">
+                  Hide Zero Activity
+                </label>
+              </div>
+            </div>
+          </Container>
+        </Card.Header>
+        <Card.Body className="pb-4 d-flex flex-column align-items-center">
+          <Row>
+            <BalanceSheetGraph balanceSheetData={balanceSheetData} width={containerWidth} />
+          </Row>
+          <Row className="w-100 overflow-x-auto">
+            <BalanceSheetTable balanceSheetData={balanceSheetData} />
+          </Row>
         </Card.Body>
       </Card>
     </div>
   );
-}
+};
 
 export default BalanceSheetRoot;
