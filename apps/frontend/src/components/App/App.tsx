@@ -1,5 +1,3 @@
-import React, { Component } from 'react';
-
 import './App.scss';
 import { useContext, useEffect } from 'react';
 import { Navigate, Outlet, RouterProvider, createBrowserRouter } from 'react-router-dom';
