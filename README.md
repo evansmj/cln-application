@@ -2,7 +2,7 @@
   <a href="https://github.com/ElementsProject/cln-application">
     <img src="./.github/images/Dashboard.png" alt="Core Lightning Dashboard">
   </a>
-  <h1 align="center">Core Lightning Application</h1>
+  <h1 align="center">CLN Application</h1>
   <h3 align="center">
     Run a Core Lightning application for your node. An official app by Blockstream. Powered by Core Lightning.
     <br />
