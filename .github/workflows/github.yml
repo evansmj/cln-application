@@ -9,9 +9,13 @@ on:
   workflow_dispatch:
   
 jobs:
+  test:
+    uses: ./.github/workflows/test.yml
+
   build:
     name: Build image
     runs-on: ubuntu-22.04
+    needs: test
 
     steps:
       - name: Set env variables
