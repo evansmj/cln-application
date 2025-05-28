@@ -1,14 +1,23 @@
-import { screen } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { mockAppStore } from '../../../utilities/test-utilities/mockData';
+import { renderWithProviders } from '../../../utilities/test-utilities/mockStore';
 import ChannelDetails from './ChannelDetails';
-import { renderWithMockContext, getMockStoreData, mockSelectedChannel } from '../../../utilities/test-utilities';
 
-describe('ChannelDetails component ', () => {
-  let providerProps;
-  beforeEach(() => providerProps = JSON.parse(JSON.stringify(getMockStoreData())));
+describe('ChannelDetails component', () => {
+  it('should be in the document', async () => {
+    await renderWithProviders(<ChannelDetails />, { preloadedState: mockAppStore, initialRoute: ['/cln'] });
 
-  it('should be in the document', () => {
-    renderWithMockContext(<ChannelDetails selChannel={mockSelectedChannel} />, { providerProps });
-    expect(screen.getByTestId('channel-details')).toBeInTheDocument();
+    // Channels list rendered
+    expect(screen.getByTestId('channels')).toBeInTheDocument();
+    expect(screen.queryByTestId('channel-details')).not.toBeInTheDocument();
+
+    // Click an first channel
+    const channelItems = screen.getAllByTestId('list-item-channel');
+    fireEvent.click(channelItems[0]);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('channel-details')).toBeInTheDocument();
+      expect(screen.queryByTestId('channels')).not.toBeInTheDocument();
+    });
   });
-
 });

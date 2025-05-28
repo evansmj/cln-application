@@ -1,16 +1,22 @@
-import { screen } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { mockAppStore } from '../../../utilities/test-utilities/mockData';
+import { renderWithProviders } from '../../../utilities/test-utilities/mockStore';
 import CLNTransaction from './CLNTransaction';
-import { renderWithMockContext, getMockStoreData, mockClnTransaction } from '../../../utilities/test-utilities';
 
 describe('CLNTransaction component ', () => {
-  let providerProps;
-  beforeEach(() => providerProps = JSON.parse(JSON.stringify(getMockStoreData())));
+  it('should be in the document', async () => {
+    await renderWithProviders(<CLNTransaction />, { preloadedState: mockAppStore, initialRoute: ['/cln'] });
 
-  it('should be in the document', () => {
-    renderWithMockContext(<CLNTransaction transaction={mockClnTransaction} />, { providerProps });
-    expect(screen.getByTestId('invoice')).toBeInTheDocument();
-    expect(screen.queryByTestId('preimage')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('valid-till')).not.toBeInTheDocument();
+    // Initial state
+    expect(screen.getByTestId('cln-transactions-list')).toBeInTheDocument();
+
+    // Click to expand
+    const expandDiv = screen.getByTestId('cln-transaction-header');
+    fireEvent.click(expandDiv);
+    await waitFor(() => {
+      expect(screen.getByTestId('invoice-header')).toBeInTheDocument();
+      expect(screen.queryByTestId('preimage')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('valid-till')).not.toBeInTheDocument();
+    });
   });
-
 });

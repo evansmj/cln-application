@@ -1,57 +1,58 @@
-import React from 'react';
-
 import './CurrencyBox.scss';
-import { useContext, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion, useMotionValue, useTransform, animate } from 'framer-motion';
-import OverlayTrigger from 'react-bootstrap/OverlayTrigger'
-import Tooltip from 'react-bootstrap/Tooltip';
+import { OverlayTrigger, Tooltip } from 'react-bootstrap';
 
-import { AppContext } from '../../../store/AppContext';
-import { formatCurrency } from '../../../utilities/data-formatters';
+import { ConvertBTCToSats, ConvertMSatsToSats, formatCurrency } from '../../../utilities/data-formatters';
 import { APP_ANIMATION_DURATION, COUNTUP_DURATION, Units } from '../../../utilities/constants';
 import FiatBox from '../FiatBox/FiatBox';
+import { useSelector } from 'react-redux';
+import { selectFiatConfig, selectFiatUnit, selectUIConfigUnit } from '../../../store/rootSelectors';
 
 const CurrencyBox = props => {
-  const appCtx = useContext(AppContext);
+  const fiatUnit = useSelector(selectFiatUnit);
+  const uiConfigUnit = useSelector(selectUIConfigUnit);
+  const fiatConfig = useSelector(selectFiatConfig);
   const [animationFinished, setAnimationFinished] = useState(0);
   const count: any = useMotionValue(0);
-  const rounded: any = useTransform(count, (value: number) => appCtx.appConfig.unit === Units.BTC ? Number.parseFloat((value).toString()).toFixed(5) : Math.floor(value));
+  const rounded: any = useTransform(count, (value: number) => uiConfigUnit === Units.BTC ? Number.parseFloat((value).toString()).toFixed(5) : Math.floor(value));
 
   useEffect(() => {
     setAnimationFinished(0);
     count.current = 0;
     count.prev = 0;
-    const animation = animate(count, +formatCurrency(props.value, Units.SATS, appCtx.appConfig.unit, false, 5, 'number'), { duration: COUNTUP_DURATION });
+    const animation = animate(count, +formatCurrency(props.value, Units.SATS, uiConfigUnit, false, 5, 'number'), { duration: COUNTUP_DURATION });
     setTimeout(() => {
       setAnimationFinished(1);
     }, APP_ANIMATION_DURATION * 1000);
     return animation.stop;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
     <OverlayTrigger
-      placement='right'
+      placement="right"
       delay={{ show: 250, hide: 250 }}
-      overlay={<Tooltip><FiatBox value={(+props.value || 0)} fiatUnit={appCtx.appConfig.fiatUnit} symbol={appCtx.fiatConfig.symbol} rate={appCtx.fiatConfig.rate} iconSize='lg' /></Tooltip>}
+      overlay={<Tooltip><FiatBox value={props.fromUnit && props.fromUnit === Units.MSATS ? ConvertMSatsToSats(props.value, 0, 'number') : props.fromUnit && props.fromUnit === Units.BTC ? ConvertBTCToSats(props.value) : props.value} fiatUnit={fiatUnit} symbol={fiatConfig.symbol} rate={fiatConfig.rate} iconSize='lg' /></Tooltip>}
       >
-      <div className={props.rootClasses}>
+      <div className={props.rootClasses} data-testid='currency-box'>
         {
           animationFinished ? 
             <div className={props.currencyClasses} data-testid="currency-box-finished-text">
-              {formatCurrency(props.value, Units.SATS, appCtx.appConfig.unit, props.shorten, 5, 'string')}
+              {formatCurrency(props.value, props.fromUnit || Units.SATS, uiConfigUnit, props.shorten, 5, 'string')}
             </div>
           : 
             <div className={'d-flex ' + props.currencyClasses}>
               <motion.div>
                 {rounded}
               </motion.div>
-              {(props.shorten && appCtx.appConfig.unit === Units.SATS) ? 'K' : ''}
+              {(props.shorten && uiConfigUnit === Units.SATS) ? 'K' : ''}
             </div>
         }
+        {!props.hideUnit && (
         <div className={props.unitClasses}>
-          {appCtx.appConfig.unit}
+          {uiConfigUnit}
         </div>
+        )}
       </div>
     </OverlayTrigger>
   );

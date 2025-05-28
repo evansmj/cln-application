@@ -1,40 +1,70 @@
-import { act, screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
+import { act } from 'react';
+import { APP_ANIMATION_DURATION, Units } from '../../../utilities/constants';
+import { mockAppConfig, mockAppStore, mockBKPRStoreData, mockCLNStoreData, mockRootStoreData, mockUIConfig } from '../../../utilities/test-utilities/mockData';
+import { renderWithProviders } from '../../../utilities/test-utilities/mockStore';
 import BTCWallet from './BTCWallet';
-import { renderWithMockContext, getMockStoreData } from '../../../utilities/test-utilities';
-import { APP_ANIMATION_DURATION } from '../../../utilities/constants';
 
 describe('BTCWallet component ', () => {
-  let providerProps;
-  beforeEach(() => providerProps = JSON.parse(JSON.stringify(getMockStoreData())));
-
-  it('should be in the document', () => {
-    providerProps.walletBalances.isLoading = false;
-    renderWithMockContext(<BTCWallet />, { providerProps });
+  it('should be in the document', async () => {
+    await renderWithProviders(<BTCWallet />, { preloadedState: mockAppStore, initialRoute: ['/cln'] });
     expect(screen.getByTestId('btc-wallet')).toBeInTheDocument();
     expect(screen.queryByTestId('btc-wallet-spinner')).not.toBeInTheDocument();
-    expect(screen.queryByTestId("btc-wallet-error")).not.toBeInTheDocument();
+    expect(screen.queryByTestId('btc-wallet-error')).not.toBeInTheDocument();
   });
 
-  it('when loading wallet balance it shows spinner', () => {
-    providerProps.walletBalances.isLoading = true;
-    renderWithMockContext(<BTCWallet />, { providerProps });
+  it('when loading wallet balance it shows spinner', async () => {
+    const customMockStore = {
+      root: {
+        ...mockRootStoreData,
+        walletBalances: {
+          isLoading: true
+        }
+      },
+      cln: mockCLNStoreData,
+      bkpr: mockBKPRStoreData
+    };
+    await renderWithProviders(<BTCWallet />, { preloadedState: customMockStore, initialRoute: ['/cln'] });
     expect(screen.getByTestId('btc-wallet-spinner')).toBeInTheDocument();
-  })
+  });
 
-  it('if error occurs, show error', () => {
-    providerProps.walletBalances.error = "error message!";
-    renderWithMockContext(<BTCWallet />, { providerProps });
+  it('if error occurs, show error', async () => {
+    const customMockStore = {
+      root: {
+        ...mockRootStoreData,
+        walletBalances: {
+          isLoading: false,
+          error: 'error message!'
+        }
+      },
+      cln: mockCLNStoreData,
+      bkpr: mockBKPRStoreData
+    };
+    await renderWithProviders(<BTCWallet />, { preloadedState: customMockStore, initialRoute: ['/cln'] });
     expect(screen.getByTestId("btc-wallet-error")).toBeInTheDocument();
   })
 
   it('if has btc spendable balance, show it', async () => {
-    providerProps.appConfig.unit = 'BTC';
     jest.useFakeTimers();
-    renderWithMockContext(<BTCWallet />, { providerProps });
+    const customMockStore = {
+      root: {
+        ...mockRootStoreData,
+        appConfig: {
+          ...mockAppConfig,
+          uiConfig: {
+            ...mockUIConfig,
+            unit: Units.BTC
+          }
+        }
+      },
+      cln: mockCLNStoreData,
+      bkpr: mockBKPRStoreData
+    };
+    await renderWithProviders(<BTCWallet />, { preloadedState: customMockStore, initialRoute: ['/cln'] });
     await act(async () => jest.advanceTimersByTime(APP_ANIMATION_DURATION * 1000));
-    const currencyBox = await screen.findByTestId('currency-box-finished-text');
+    const btcWalletCard = screen.getByTestId('btc-wallet-balance-card');
+    const currencyBox = await within(btcWalletCard).getByTestId('currency-box-finished-text');
     expect(currencyBox).toBeInTheDocument();
     expect(currencyBox).toHaveTextContent('0.74100');
-  })
-
+  });
 });

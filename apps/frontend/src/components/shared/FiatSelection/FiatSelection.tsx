@@ -1,23 +1,28 @@
-import React from 'react';
-
 import './FiatSelection.scss';
-import { useContext } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import PerfectScrollbar from 'react-perfect-scrollbar';
-import Dropdown from 'react-bootstrap/Dropdown';
-import Col from 'react-bootstrap/Col';
+import { Dropdown, Col } from 'react-bootstrap';
 
-import useHttp from '../../../hooks/use-http';
-import { AppContext } from '../../../store/AppContext';
 import { FIAT_CURRENCIES } from '../../../utilities/constants';
 import { CurrencySVG } from '../../../svgs/Currency';
+import { RootService } from '../../../services/http.service';
+import { setConfig, setFiatConfig } from '../../../store/rootSlice';
+import { useDispatch, useSelector } from 'react-redux';
+import { selectAppConfig, selectFiatConfig, selectFiatUnit } from '../../../store/rootSelectors';
 
 const FiatSelection = (props) => {
-  const appCtx = useContext(AppContext);
-  const { updateConfig } = useHttp();
+  const dispatch = useDispatch();
+  const fiatUnit = useSelector(selectFiatUnit);
+  const fiatConfig = useSelector(selectFiatConfig);
+  const appConfig = useSelector(selectAppConfig);
+  const fiatSymbol = FIAT_CURRENCIES.find((fiat => fiat.currency === fiatUnit))?.symbol;
 
-  const fiatChangeHandler = (eventKey: any, event: any) => {
-    updateConfig({...appCtx.appConfig, fiatUnit: eventKey});
+  const fiatChangeHandler = async (eventKey: any, event: any) => {
+    const updatedConfig = { ...appConfig, uiConfig: { ...appConfig.uiConfig, fiatUnit: eventKey } };
+    await RootService.updateConfig(updatedConfig);
+    const updatedFiatConfig = await RootService.getFiatConfig(eventKey);
+    dispatch(setConfig(updatedConfig));
+    dispatch(setFiatConfig(updatedFiatConfig));
   };
 
   return (
@@ -25,14 +30,14 @@ const FiatSelection = (props) => {
     <Dropdown className={props.className} onSelect={fiatChangeHandler} data-testid='fiat-selection'>
       <Dropdown.Toggle variant='outline border-gray-300 d-flex align-items-center'>
         <Col xs={4}>
-          { appCtx.fiatConfig.symbol ? 
-            <FontAwesomeIcon className='text-dark fa-md' icon={appCtx.fiatConfig.symbol} />
+          { fiatConfig.symbol || (fiatSymbol?.prefix.startsWith('fa') && fiatSymbol.iconName) ?
+            <FontAwesomeIcon className='text-dark fa-md' icon={fiatConfig?.symbol || fiatSymbol} />
             :
-            <CurrencySVG className='svg-currency' fiat={appCtx.appConfig.fiatUnit}></CurrencySVG>
+            <CurrencySVG className='svg-currency' fiat={fiatUnit || 'USD'}></CurrencySVG>
           }
         </Col>
         <Col xs={6}>
-          <span className='dropdown-toggle-text text-dark'>{appCtx.appConfig.fiatUnit || 'USD'}</span>
+          <span className='dropdown-toggle-text text-dark'>{fiatUnit || 'USD'}</span>
         </Col>
       </Dropdown.Toggle>
       <Dropdown.Menu>
@@ -44,7 +49,7 @@ const FiatSelection = (props) => {
                 { fiat.symbol ? 
                   <FontAwesomeIcon className='fa-md' icon={fiat.symbol} />
                   :
-                  <CurrencySVG className='svg-currency' fiat={fiat.currency}></CurrencySVG>
+                  <CurrencySVG className='svg-currency' fiat={fiat.currency || 'USD'}></CurrencySVG>
                 }
               </Col>
               <Col xs={6}>
@@ -58,6 +63,6 @@ const FiatSelection = (props) => {
     </Dropdown>
   </>
   );
-}
+};
 
 export default FiatSelection;

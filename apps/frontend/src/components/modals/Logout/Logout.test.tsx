@@ -1,20 +1,37 @@
-import { screen } from '@testing-library/react';
-import Logout from './Logout';
-import { renderWithMockContext, getMockStoreData } from '../../../utilities/test-utilities';
+import { screen, fireEvent, waitFor } from '@testing-library/react';
+import { renderWithProviders } from '../../../utilities/test-utilities/mockStore';
+import LogoutComponent from './Logout';
+import { mockAppStore } from '../../../utilities/test-utilities/mockData';
+import { RootService } from '../../../services/http.service';
+import { spyOnUserLogout } from '../../../utilities/test-utilities/mockService';
 
-describe('Logout component ', () => {
-  let providerProps;
-  beforeEach(() => providerProps = JSON.parse(JSON.stringify(getMockStoreData('showModals', { logoutModal: true }))));
+describe('LogoutComponent', () => {
+  beforeEach(() => {
+    mockAppStore.root.showModals.logoutModal = true;
+    jest.clearAllMocks();
+  });
 
-  it('should be in the document', () => {
-    renderWithMockContext(<Logout />, { providerProps });
+  it('renders the logout modal', async () => {
+    await renderWithProviders(<LogoutComponent />, { preloadedState: mockAppStore });
     expect(screen.getByTestId('logout-modal')).toBeInTheDocument();
+    expect(screen.getByText(/Logout\?/i)).toBeInTheDocument();
   });
 
-  it('if AppContext config says hide, hide this modal', () => {
-    providerProps.showModals.logoutModal = false;
-    renderWithMockContext(<Logout />, { providerProps });
-    expect(screen.queryByTestId('logout-modal')).not.toBeInTheDocument();
+  it('calls userLogout and clears stores on Yes click', async () => {
+    spyOnUserLogout();
+    await renderWithProviders(<LogoutComponent />, { preloadedState: mockAppStore });
+    fireEvent.click(screen.getByText('Yes'));
+    await waitFor(() => {
+      expect(RootService.userLogout).toHaveBeenCalled();
+    });
   });
 
+  it('does not call userLogout on No click', async () => {
+    spyOnUserLogout();
+    await renderWithProviders(<LogoutComponent />, { preloadedState: mockAppStore });
+    fireEvent.click(screen.getByText('No'));
+    await waitFor(() => {
+      expect(RootService.userLogout).not.toHaveBeenCalled();
+    });
+  });
 });
